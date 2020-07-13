@@ -11,7 +11,7 @@ namespace Infrastructure.Data
 {
     public class ProductRepository : IProductRepository
     {
-        private StoreContext _context;
+        private readonly StoreContext _context;
 
         public ProductRepository(StoreContext context)
         {
