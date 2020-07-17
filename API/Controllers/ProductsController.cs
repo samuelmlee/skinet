@@ -2,10 +2,12 @@
 using Core.Entities;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using API.Dtos;
 using API.Errors;
+using API.Helpers;
 using AutoMapper;
 using Core.Interfaces;
 using Core.Specifications;
@@ -33,14 +35,26 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyList<ProductToReturnDto>>> GetProducts()
+        public async Task<ActionResult<Pagination<IReadOnlyList<ProductToReturnDto>>>> GetProducts(
+            [FromQuery] ProductSpecParams productParams)
         {
-            var spec = new ProductsWithTypesAndBrandsSpecification();
+            var paramsLog = Newtonsoft.Json.JsonConvert.SerializeObject(productParams);
+            System.Diagnostics.Debug.WriteLine(paramsLog);
+
+            var spec = new ProductsWithTypesAndBrandsSpecification(productParams);
+
+            var countSpec = new ProductWithFiltersForCountSpecification(productParams);
+
+            var totalItems = await _productRepo.CountAsync(countSpec);
 
             var products = await _productRepo.ListAsync(spec);
 
-            return Ok(_mapper.Map<IReadOnlyList<Product>,
-                IReadOnlyList<ProductToReturnDto>>(products));
+            var data = _mapper.Map<IReadOnlyList<Product>,
+                IReadOnlyList<ProductToReturnDto>>(products);
+
+            var returnDto = new Pagination<ProductToReturnDto>(productParams.PageIndex, productParams.PageSize, totalItems, data);
+
+            return Ok(returnDto);
         }
 
         [HttpGet("{id}")]
